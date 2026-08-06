@@ -51,7 +51,7 @@ def scan_repo(repo_path: str) -> list[dict]:  # It will return as a string
     files = []  # an empty list that we will fill with data
 
     for file_path in repo.rglob("*"):  # "r" in "rglob" mean recursive, so it will scan all the files in the repo and subfolders
-        if should_ignore_path(file_path):  #if file belongs to ignored file path, continue, skip it.
+        if should_ignore_path(file_path):  #if file belongs to ignored file path, continue, skip it. yuh
             continue
 
         if file_path.is_file() and is_supported_file(file_path):# It asks, is it a file? AND is it supported?

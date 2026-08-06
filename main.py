@@ -18,7 +18,7 @@ def main():
     for file in files:
         total_lines += file["line_count"]
 
-    print("RepoLens Search Summary")
+    print("RepoLens Search Summary") #makes terminal look cleaner
     print("-----------------------")
     print(f"Repository: {repo_path}")
     print(f"Query: {query}")
