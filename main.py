@@ -13,8 +13,18 @@ def main():
     files = scan_repo(repo_path)
     results = search_files(files, query)
 
-    print(f"Scanned {len(files)} file(s)")
-    print(f"Found {len(results)} result(s)")
+    total_lines = 0
+
+    for file in files:
+        total_lines += file["line_count"]
+
+    print("RepoLens Search Summary")
+    print("-----------------------")
+    print(f"Repository: {repo_path}")
+    print(f"Query: {query}")
+    print(f"Files scanned: {len(files)}")
+    print(f"Lines scanned: {total_lines}")
+    print(f"Results found: {len(results)}")
     print()
 
     if not results:

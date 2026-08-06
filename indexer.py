@@ -10,16 +10,34 @@ SUPPORTED_EXTENSIONS = {
     ".html",
     ".css",
     ".js",
+    ".c",
+    ".ts",
+    ".tsx",
+    ".json",
+    ".md",
 }
 
 
+IGNORED_DIRS = {
+    ".git",
+    "__pycache__",
+    ".venv",
+    "node_modules",
+    "dist",
+    "build",
+}
 # A list of supported suffixes or files, so when we do scan for a file it returns true or false that it supports the file
 
-def is_supported_file(file_path: Path) -> bool:
-    return file_path.suffix in SUPPORTED_EXTENSIONS
+def is_supported_file(file_path: Path) -> bool:# It checks wether what we file we input is supported in our checker, check list.
+    return file_path.suffix.lower() in SUPPORTED_EXTENSIONS
 
+def should_ignore_path(file_path:Path) -> bool:
+    for part in file_path.parts:
+        if part in IGNORED_DIRS:
+            return True
 
-# It checks wether what we file we input is supported in our checker, check list.
+    return False
+
 
 
 def scan_repo(repo_path: str) -> list[dict]:  # It will return as a string
@@ -32,22 +50,28 @@ def scan_repo(repo_path: str) -> list[dict]:  # It will return as a string
 
     files = []  # an empty list that we will fill with data
 
-    for file_path in repo.rglob(
-            "*"):  # "r" in "rglob" mean recursive, so it will scan all the files in the repo and subfolders
-        if file_path.is_file() and is_supported_file(file_path):  # It asks, is it a file? AND is it supported?
+    for file_path in repo.rglob("*"):  # "r" in "rglob" mean recursive, so it will scan all the files in the repo and subfolders
+        if should_ignore_path(file_path):  #if file belongs to ignored file path, continue, skip it.
+            continue
+
+        if file_path.is_file() and is_supported_file(file_path):# It asks, is it a file? AND is it supported?
             try:
                 content = file_path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
                 continue
-            # Saying, open the file and read it to me, using the encoding above, and store it into 'content'
-            # Read the file and if it fails because of text encoding, skip it and keep going
+                #Saying, open the file and read it to me, using the encoding above, and store it into 'content'
+                #Read the file and if it fails because of text encoding, skip it and keep going
 
-            files.append({ #This adds a dictionary to the "files" list. where "path" stores where the file is which is the path and obviously content, is what is inside the said "files"
+
+            lines = content.splitlines()
+
+            files.append({  #This adds a dictionary to the "files" list. where "path" stores where the file is which is the path and obviously content, is what is inside the said "files"
                 "path": str(file_path),
                 "content": content,
+                "line_count": len(lines),
             })
 
-    return files #gives you the files when called function
+    return files  #gives you the files when called function
 
 
 def search_files(files: list[dict], query: str, context_lines: int = 2) -> list[dict]:  #takes in file, query, and context lines. context_lines: int = 2 will allow you too see above 2 and down 2 lines
