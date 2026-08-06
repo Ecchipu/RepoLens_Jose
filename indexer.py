@@ -50,21 +50,34 @@ def scan_repo(repo_path: str) -> list[dict]:  # It will return as a string
     return files #gives you the files when called function
 
 
-def search_files(files: list[dict], query: str) -> list[dict]: #Searches through the file list for matches
-    results = [] #will store every match we find, adding to the list with every result.
+def search_files(files: list[dict], query: str, context_lines: int = 2) -> list[dict]:  #takes in file, query, and context lines. context_lines: int = 2 will allow you too see above 2 and down 2 lines
+    results = []  # an empty list that we will fill with data
 
     for file in files:
-        lines = file["content"].splitlines() #this splitlines function makes the two outcomes come in two separate lines as said in function.
+        lines = file["content"].splitlines()
 
-        for line_number, line in enumerate(lines, start=1): #amkes it so it reads as line 1 to #
-            if query.lower() in line.lower(): #so it makes it incase sensitive, so when we look up something with upper or lower case, H h, it will still find it.
+        for index, line in enumerate(lines):
+            if query.lower() in line.lower():
+                start = max(0, index - context_lines)
+                end = min(len(lines), index + context_lines + 1)
+
+                context = []
+
+                for context_index in range(start, end): # results now capture extra nearby lines
+                    context.append({
+                        "line_number": context_index + 1,
+                        "line": lines[context_index],
+                        "is_match": context_index == index,
+                    })
+
                 results.append({
                     "path": file["path"],
-                    "line_number": line_number,
+                    "line_number": index + 1,
                     "line": line.strip(),
+                    "context": context,
                 })
 
-    return results #the wesults
+    return results
 
 
 

@@ -17,10 +17,17 @@ def main():
     print(f"Found {len(results)} result(s)")
     print()
 
+    if not results:
+        print("No results found.")
+        return
 
     for result in results:
         print(result["path"])
-        print(f"line {result['line_number']}: {result['line']}")
+
+        for context_line in result["context"]:
+            marker = ">" if context_line["is_match"] else " "
+            print(f"{marker} {context_line['line_number']}: {context_line['line']}")
+
         print()
 
 if __name__ == "__main__":
