@@ -5,14 +5,20 @@ from indexer import scan_repo, search_files #Reusing what we wrote in indexer.py
 app = FastAPI(
     title="RepoLens API",
     description="A code search API that scans a repository and returns matching code lines with context.",
-    version="1.0.0",
+    version="1.0.1",
 )
 
 @app.get("/") # SO when you run the API, it will automatically open this page, because it is the root page, returning the message bellow, showing how it works. like in html, "/" is default page or new blank page, something like that
 def root():
     return {
         "message": "RepoLens API is running",
-        "try": "/search?repo_path=sample_repo&query=login",
+        "routes": {
+            "health": "/health",
+            "search": "/search?repo_path=sample_repo&query=login",
+            "files": "/files?repo_path=sample_repo",
+            "stats": "/stats?repo_path=sample_repo",
+            "docs": "/docs",
+        }
     }
 
 @app.get("/health") #when runnin the API, you can use "/health" right after the url to check if the API is running.
@@ -25,10 +31,17 @@ def health_check():
 def search_repo(
         repo_path: str = Query(..., description="Path to the repository folder to scan"),
         query: str = Query(..., min_length=1, description="Search term to look for"),
-):
+        context_lines: int = Query(
+            2,
+            ge=0, #Greater than or equal to 0, so no negative numbers.
+            le=10, #less than or equal to 10, so no more than 10 lines of context, because it will be too much and will make the API slow.
+            description= "Number of lines to show before and after each match",
+        ),
+): #sad face
+
     try: #anything that doesn't work in the try block, will be caught in the except block, and will return a 404 error with the message of what went wrong
         files = scan_repo(repo_path)
-        results = search_files(files,query)
+        results = search_files(files, query, context_lines=context_lines)
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error))
     except NotADirectoryError as error:
@@ -42,8 +55,66 @@ def search_repo(
     return {
         "repository": repo_path,
         "query": query,
+        "context_lines": context_lines,
         "files_scanned": len(files),
         "lines_scanned": total_lines,
         "results_found": len(results),
         "results": results
     }
+
+@app.get("/files")
+def list_files(
+        repo_path: str = Query(..., descritpion="Path to the repository folder to scan"),
+):
+    try:
+        files = scan_repo(repo_path)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    file_list = []
+
+    for file in files:
+        file_list.append({
+            "path": file["path"],
+            "line_count": file["line_count"],
+        })
+
+    return {
+        "repository": repo_path,
+        "files_found": len(file_list),
+        "files": file_list
+    }
+
+@app.get("/stats")
+def get_repo_stats(
+        repo_path: str = Query(..., description="Path to the repository folder to scan"),
+):
+    try:
+        files = scan_repo(repo_path)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    total_lines = 0
+
+    for file in files:
+        total_lines += file["line_count"]
+
+    return {
+        "repository": repo_path,
+        "files_scanned": len(files),
+        "lines_scanned": total_lines,
+    }
+
+
+
+
+
+
+
+
+
+
