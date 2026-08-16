@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoLens</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="app-shell">
+        <header class="hero">
+            <p class="eyebrow">Codebase Search Tool</p>
+            <h1>RepoLens</h1>
+            <p class="subtitle">
+                Search through a repository and inspect matching code with file paths, line numbers and context.
+            </p>
+        </header>
+
+        <section class="panel">
+            <div class="form-grid">
+
+                <label>
+                    Repository Path
+                    <input id="repoPath" type="text" value="sample_repo">
+                </label>
+
+                <label>
+                    Search Query
+                    <input id="searchQuery" type="text" value="login">
+                </label>
+
+                <label>
+                    Context Lines
+                    <select id="contextLines">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="button-row">
+                <button id="searchButton">Search Code</button>
+                <button id="filesButton" class="secondary">View Files</button>
+                <button id="statsButton" class="secondary">View Stats</button>
+            </div>
+        </section>
+
+        <section id="summary" class="summary"></section>
+
+        <section class="results-panel">
+
+            <div class="results-header">
+                <h2>Results</h2>
+                <p id="statusText">Run a search to see results here</p>
+            </div>
+
+            <div id="results" class="results"></div>
+
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+
+</body>
+</html>

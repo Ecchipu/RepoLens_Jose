@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
 
 from indexer import scan_repo, search_files #Reusing what we wrote in indexer.py, so we can use it here in the API
 
@@ -111,6 +112,7 @@ def get_repo_stats(
 
 
 
+app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
 
 
 
