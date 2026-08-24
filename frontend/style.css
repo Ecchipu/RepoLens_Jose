@@ -112,6 +112,7 @@ button.secondary {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
     margin: 18px 0;
+    color: white;
 }
 
 .stat-card {
@@ -142,6 +143,7 @@ button.secondary {
 
 .results-header h2 {
     margin: 0;
+    color: white;
 }
 
 #statusText {
