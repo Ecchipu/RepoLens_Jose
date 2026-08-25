@@ -1,12 +1,12 @@
 * {
-    boxing: border-box;
+    box-sizing: border-box;
 }
 
 body {
     margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #101218;
+    color: #f4f7fb;
 }
 
 .app-shell {
@@ -34,7 +34,7 @@ h1 {
     margin: 0;
 }
 
-.subtle {
+.subtitle {
     max-width: 720px;
     color: #b8c0d4;
     font-size: 1.05rem;
@@ -57,7 +57,7 @@ h1 {
 }
 
 label {
-    display:grid;
+    display: grid;
     gap: 8px;
     color: #c9d1e6;
     font-size: 0.9rem;
@@ -71,6 +71,7 @@ select {
     border-radius: 12px;
     background: #0f1117;
     color: #ffffff;
+    padding: 12px 14px;
     font-size: 1rem;
 }
 
@@ -80,18 +81,18 @@ select:focus {
     border-color: transparent;
 }
 
-.button-row{
+.button-row {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin-top: 20px
+    margin-top: 20px;
 }
 
 button {
     border: 0;
     border-radius: 12px;
     background: #8ea4ff;
-    color: # 090b10;
+    color: #090b10;
     padding: 12px 18px;
     font-size: 0.95rem;
     font-weight: 800;
@@ -112,7 +113,6 @@ button.secondary {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
     margin: 18px 0;
-    color: white;
 }
 
 .stat-card {
@@ -143,7 +143,6 @@ button.secondary {
 
 .results-header h2 {
     margin: 0;
-    color: white;
 }
 
 #statusText {
@@ -156,14 +155,14 @@ button.secondary {
     gap: 16px;
 }
 
-.results-card {
+.result-card {
     border: 1px solid #2a2f3d;
     border-radius: 14px;
     overflow: hidden;
     background: #0f1117;
 }
 
-.results-path {
+.result-path {
     padding: 12px 14px;
     background: #202432;
     color: #d7def3;
@@ -171,12 +170,12 @@ button.secondary {
     border-bottom: 1px solid #2a2f3d;
 }
 
-code-block {
+.code-block {
     padding: 10px 0;
     overflow-x: auto;
 }
 
-code-line {
+.code-line {
     display: grid;
     grid-template-columns: 34px 54px 1fr;
     gap: 10px;
@@ -186,7 +185,7 @@ code-line {
     line-height: 1.5;
 }
 
-code-line.match {
+.code-line.match {
     background: rgba(142, 164, 255, 0.16);
 }
 
@@ -202,6 +201,7 @@ code-line.match {
 
 .line-code {
     white-space: pre;
+    color: white;
 }
 
 .empty-state,
@@ -237,11 +237,10 @@ code-line.match {
 }
 
 .file-row span {
-    color: #99aa6bf;
+    color: #9aa6bf;
 }
 
 @media (max-width: 800px) {
-
     .form-grid {
         grid-template-columns: 1fr;
     }
@@ -253,11 +252,9 @@ code-line.match {
     .results-header {
         display: block;
     }
-
 }
 
 @media (max-width: 520px) {
-
     .summary {
         grid-template-columns: 1fr;
     }
@@ -266,6 +263,4 @@ code-line.match {
         grid-template-columns: 24px 44px 1fr;
         font-size: 0.82rem;
     }
-
 }
-
