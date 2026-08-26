@@ -165,7 +165,7 @@ button.secondary {
 .result-path {
     padding: 12px 14px;
     background: #202432;
-    color: #d7def3;
+    color: #ffffff;
     font-weight: 800;
     border-bottom: 1px solid #2a2f3d;
 }
@@ -201,7 +201,7 @@ button.secondary {
 
 .line-code {
     white-space: pre;
-    color: white;
+    color: #ffffff;
 }
 
 .empty-state,
