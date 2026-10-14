@@ -193,6 +193,15 @@ function renderStats(data) {
         },
     ]);
 
+    resultsContainer.innerHTML = `
+        <div class="empty-state">
+            RepoLens scanned ${escapeHTML(data.files_scanned)} file(s)
+            and ${escapeHTML(data.lines_scanned)} line(s) of code.
+        </div>
+    `;
+}
+
+
 function renderSymbols(data) {
     renderSummary([
         {
@@ -279,6 +288,40 @@ function renderSymbols(data) {
             </article>
         `;
     }).join("");
+}
+
+
+async function runSearch() {
+    const repoPath = getRepoPath();
+    const query = getSearchQuery();
+    const contextLines = getContextLines();
+
+    if (!repoPath) {
+        showError("Please enter a repository path.");
+        return;
+    }
+
+    if (!query) {
+        showError("Please enter a search query.");
+        return;
+    }
+
+    clearPage();
+    setStatus("Searching...");
+
+    try {
+        const data = await requestJSON("/search", {
+            repo_path: repoPath,
+            query: query,
+            context_lines: contextLines,
+        });
+
+        renderSearchResults(data);
+        setStatus("Search complete.");
+    } catch (error) {
+        showError(error.message);
+        setStatus("Search failed.");
+    }
 }
 
 
