@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
 from indexer import scan_repo, search_files #Reusing what we wrote in indexer.py, so we can use it here in the API
+from symbols import extract_symbols
+
 
 app = FastAPI(
     title="RepoLens API",
@@ -18,6 +20,7 @@ def root():
             "search": "/search?repo_path=sample_repo&query=login",
             "files": "/files?repo_path=sample_repo",
             "stats": "/stats?repo_path=sample_repo",
+            "symbols": "/symbols?repo_path=sample_repo",
             "docs": "/docs",
         }
     }
@@ -110,6 +113,31 @@ def get_repo_stats(
         "lines_scanned": total_lines,
     }
 
+@app.get("/symbols")
+def get_symbols(
+        repo_path: str = Query(..., description="Path to the repository folder to scan"),
+):
+    try:
+        analyzed_files = extract_symbols(repo_path)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    total_symbols = 0
+    total_imports = 0
+
+    for file in analyzed_files:
+        total_symbols += len(file["symbols"])
+        total_imports += len(file["imports"])
+
+    return {
+        "repository": repo_path,
+        "python_files_analyzed": len(analyzed_files),
+        "symbols_found": total_symbols,
+        "imports_found": total_imports,
+        "files": analyzed_files,
+    }
 
 
 app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")

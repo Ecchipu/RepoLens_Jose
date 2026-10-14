@@ -5,6 +5,7 @@ const contextLinesInput = document.getElementById("contextLines");
 const searchButton = document.getElementById("searchButton");
 const filesButton = document.getElementById("filesButton");
 const statsButton = document.getElementById("statsButton");
+const symbolsButton = document.getElementById("symbolsButton");
 
 const summaryContainer = document.getElementById("summary");
 const resultsContainer = document.getElementById("results");
@@ -192,6 +193,94 @@ function renderStats(data) {
         },
     ]);
 
+function renderSymbols(data) {
+    renderSummary([
+        {
+            label: "Repository",
+            value: data.repository,
+        },
+        {
+            label: "Python files",
+            value: data.python_files_analyzed,
+        },
+        {
+            label: "Symbols found",
+            value: data.symbols_found,
+        },
+        {
+            label: "Imports found",
+            value: data.imports_found,
+        },
+    ]);
+
+    if (data.files.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="empty-state">
+                No Python files found to analyze.
+            </div>
+        `;
+        return;
+    }
+
+    resultsContainer.innerHTML = data.files.map(file => {
+        const symbolsHTML = file.symbols.length === 0
+            ? `<p class="muted-text">No functions or classes found.</p>`
+            : file.symbols.map(symbol => {
+                return `
+                    <div class="symbol-row">
+                        <span class="symbol-type">${escapeHTML(symbol.type)}</span>
+                        <code>${escapeHTML(symbol.name)}</code>
+                        <span>Line ${escapeHTML(symbol.line_number)}</span>
+                    </div>
+                `;
+            }).join("");
+
+        const importsHTML = file.imports.length === 0
+            ? `<p class="muted-text">No imports found.</p>`
+            : file.imports.map(importItem => {
+                if (importItem.type === "from_import") {
+                    return `
+                        <div class="symbol-row">
+                            <span class="symbol-type">from import</span>
+                            <code>from ${escapeHTML(importItem.module)} import ${escapeHTML(importItem.name)}</code>
+                            <span>Line ${escapeHTML(importItem.line_number)}</span>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="symbol-row">
+                        <span class="symbol-type">import</span>
+                        <code>${escapeHTML(importItem.module)}</code>
+                        <span>Line ${escapeHTML(importItem.line_number)}</span>
+                    </div>
+                `;
+            }).join("");
+
+        const parseErrorHTML = file.parse_error
+            ? `<div class="error-state">Parse error: ${escapeHTML(file.parse_error)}</div>`
+            : "";
+
+        return `
+            <article class="result-card">
+                <div class="result-path">
+                    ${escapeHTML(file.path)}
+                </div>
+
+                <div class="symbol-section">
+                    ${parseErrorHTML}
+
+                    <h3>Symbols</h3>
+                    ${symbolsHTML}
+
+                    <h3>Imports</h3>
+                    ${importsHTML}
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
     resultsContainer.innerHTML = `
         <div class="empty-state">
             RepoLens scanned ${escapeHTML(data.files_scanned)} file(s)
@@ -285,9 +374,35 @@ async function viewStats() {
 }
 
 
+async function viewSymbols() {
+    const repoPath = getRepoPath();
+
+    if (!repoPath) {
+        showError("Please enter a repository path.");
+        return;
+    }
+
+    clearPage();
+    setStatus("Loading symbols...");
+
+    try {
+        const data = await requestJSON("/symbols", {
+            repo_path: repoPath,
+        });
+
+        renderSymbols(data);
+        setStatus("Symbols loaded.");
+    } catch (error) {
+        showError(error.message);
+        setStatus("Could not load symbols.");
+    }
+}
+
+
 searchButton.addEventListener("click", runSearch);
 filesButton.addEventListener("click", viewFiles);
 statsButton.addEventListener("click", viewStats);
+symbolsButton.addEventListener("click", viewSymbols)
 
 searchQueryInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {

@@ -240,6 +240,56 @@ button.secondary {
     color: #9aa6bf;
 }
 
+.symbol-section {
+    padding: 18px;
+}
+
+.symbol-section h3 {
+    margin: 18px 0 10px;
+    color: #d7def3;
+    font-size: 1rem;
+}
+
+.symbol-section h3:first-child {
+    margin-top: 0;
+}
+
+.symbol-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 90px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #252a37;
+}
+
+.symbol-row:last-child {
+    border-bottom: 0;
+}
+
+.symbol-type {
+    color: #8ea4ff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.symbol-row code {
+    color: #f4f7fb;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.symbol-row span:last-child {
+    color: #9aa6bf;
+    text-align: right;
+}
+
+.muted-text {
+    color: #9aa6bf;
+    margin: 0 0 12px;
+}
+
+
 @media (max-width: 800px) {
     .form-grid {
         grid-template-columns: 1fr;
