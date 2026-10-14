@@ -402,10 +402,7 @@ async function viewSymbols() {
 searchButton.addEventListener("click", runSearch);
 filesButton.addEventListener("click", viewFiles);
 statsButton.addEventListener("click", viewStats);
-symbolsButton.addEventListener("click", () => {
-    console.log("Symbols button clicked");
-    viewSymbols();
-});
+symbolsButton.addEventListener("click", viewSymbols);
 
 searchQueryInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {
