@@ -220,6 +220,7 @@ function renderSearchResults(data) {
 }
 
 
+
 function renderFiles(data) {
     renderSummary([
         {
@@ -246,14 +247,26 @@ function renderFiles(data) {
             ${data.files.map(file => {
                 return `
                     <div class="file-row">
-                        <code>${escapeHTML(file.path)}</code>
+
+                        <button
+                            type="button"
+                            class="file-open-link"
+                            data-open-file="${escapeHTML(file.path)}"
+                            data-line-number="1">
+
+                            <code>${escapeHTML(file.path)}</code>
+
+                        </button>
+
                         <span>${escapeHTML(file.line_count)} lines</span>
+
                     </div>
                 `;
             }).join("")}
         </div>
     `;
 }
+
 
 
 function renderStats(data) {
@@ -279,6 +292,7 @@ function renderStats(data) {
         </div>
     `;
 }
+
 
 
 function renderSymbols(data) {
@@ -311,51 +325,96 @@ function renderSymbols(data) {
     }
 
     resultsContainer.innerHTML = data.files.map(file => {
+
+        // Build clickable function and class names.
         const symbolsHTML = file.symbols.length === 0
             ? `<p class="muted-text">No functions or classes found.</p>`
             : file.symbols.map(symbol => {
                 return `
                     <div class="symbol-row">
-                        <span class="symbol-type">${escapeHTML(symbol.type)}</span>
-                        <code>${escapeHTML(symbol.name)}</code>
-                        <span>Line ${escapeHTML(symbol.line_number)}</span>
+
+                        <span class="symbol-type">
+                            ${escapeHTML(symbol.type)}
+                        </span>
+
+                        <button
+                            type="button"
+                            class="file-open-link"
+                            data-open-file="${escapeHTML(file.path)}"
+                            data-line-number="${symbol.line_number}">
+
+                            <code>${escapeHTML(symbol.name)}</code>
+
+                        </button>
+
+                        <span>
+                            Line ${symbol.line_number}
+                        </span>
+
                     </div>
                 `;
             }).join("");
 
+        // Build clickable import statements.
         const importsHTML = file.imports.length === 0
             ? `<p class="muted-text">No imports found.</p>`
             : file.imports.map(importItem => {
+
+                let importText;
+
                 if (importItem.type === "from_import") {
-                    return `
-                        <div class="symbol-row">
-                            <span class="symbol-type">from import</span>
-                            <code>from ${escapeHTML(importItem.module)} import ${escapeHTML(importItem.name)}</code>
-                            <span>Line ${escapeHTML(importItem.line_number)}</span>
-                        </div>
-                    `;
+                    const dots = ".".repeat(importItem.level || 0);
+                    const module = importItem.module || "";
+
+                    importText = `from ${dots}${module} import ${importItem.name}`;
+                } else {
+                    importText = `import ${importItem.module}`;
+                }
+
+                if (importItem.alias) {
+                    importText += ` as ${importItem.alias}`;
                 }
 
                 return `
                     <div class="symbol-row">
-                        <span class="symbol-type">import</span>
-                        <code>${escapeHTML(importItem.module)}</code>
-                        <span>Line ${escapeHTML(importItem.line_number)}</span>
+
+                        <span class="symbol-type">
+                            ${escapeHTML(importItem.type)}
+                        </span>
+
+                        <button
+                            type="button"
+                            class="file-open-link"
+                            data-open-file="${escapeHTML(file.path)}"
+                            data-line-number="${importItem.line_number}">
+
+                            <code>${escapeHTML(importText)}</code>
+
+                        </button>
+
+                        <span>
+                            Line ${importItem.line_number}
+                        </span>
+
                     </div>
                 `;
             }).join("");
 
         const parseErrorHTML = file.parse_error
-            ? `<div class="error-state">Parse error: ${escapeHTML(file.parse_error)}</div>`
+            ? `<div class="error-state">
+                Parse error: ${escapeHTML(file.parse_error)}
+               </div>`
             : "";
 
         return `
             <article class="result-card">
+
                 <div class="result-path">
                     ${escapeHTML(file.path)}
                 </div>
 
                 <div class="symbol-section">
+
                     ${parseErrorHTML}
 
                     <h3>Symbols</h3>
@@ -363,11 +422,14 @@ function renderSymbols(data) {
 
                     <h3>Imports</h3>
                     ${importsHTML}
+
                 </div>
+
             </article>
         `;
     }).join("");
 }
+
 
 
 function createSVGElement(tag, attributes = {}) {

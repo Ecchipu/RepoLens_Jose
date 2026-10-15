@@ -465,6 +465,48 @@ button.secondary {
 }
 
 
+/* Clickable file and symbol links */
+
+.file-open-link {
+    display: inline-block;
+    min-width: 0;
+    padding: 4px 6px;
+    border: none;
+    border-radius: 6px;
+
+    background: transparent;
+    color: #d7def3;
+
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.file-open-link code {
+    color: inherit;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.9rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.file-open-link:hover {
+    background: rgba(142, 164, 255, 0.12);
+    color: #8ea4ff;
+    text-decoration: underline;
+}
+
+.file-open-link:focus-visible {
+    outline: 2px solid #8ea4ff;
+    outline-offset: 2px;
+}
+
+.symbol-row {
+    grid-template-columns: 130px minmax(0, 1fr) 90px;
+}
+
+
+
 @media (max-width: 850px) {
     .dependency-layout {
         grid-template-columns: 1fr;
