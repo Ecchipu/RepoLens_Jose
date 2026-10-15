@@ -65,6 +65,7 @@ def analyze_python_file(file: dict) -> dict:
                     "module": node.module,
                     "name": alias.name,
                     "alias": alias.asname,
+                    "level": node.level,
                     "line_number": node.lineno,
                 })
 

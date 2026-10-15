@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 
 from indexer import scan_repo, search_files #Reusing what we wrote in indexer.py, so we can use it here in the API
 from symbols import extract_symbols
+from dependencies import build_dependency_graph
 
 
 app = FastAPI(
@@ -138,6 +139,22 @@ def get_symbols(
         "imports_found": total_imports,
         "files": analyzed_files,
     }
+
+@app.get("/dependencies")
+def get_dependencies(
+        repo_path: str = Query(..., description="Repository folder to analyze"),
+):
+    try:
+        graph = build_dependency_graph(repo_path)
+
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return graph
+
 
 
 app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")

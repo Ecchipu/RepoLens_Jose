@@ -6,6 +6,7 @@ const searchButton = document.getElementById("searchButton");
 const filesButton = document.getElementById("filesButton");
 const statsButton = document.getElementById("statsButton");
 const symbolsButton = document.getElementById("symbolsButton");
+const dependenciesButton = document.getElementById("dependenciesButton")
 
 const summaryContainer = document.getElementById("summary");
 const resultsContainer = document.getElementById("results");
@@ -291,6 +292,356 @@ function renderSymbols(data) {
 }
 
 
+function createSVGElement(tag, attributes = {}) {
+    const element = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        tag
+    );
+
+    for (const [name, value] of Object.entries(attributes)) {
+        element.setAttribute(name, String(value));
+    }
+
+    return element;
+}
+
+
+function renderDependencies(data) {
+    renderSummary([
+        { label: "Repository", value: data.repository },
+        { label: "Python files", value: data.files_analyzed },
+        { label: "Dependencies", value: data.dependencies_found },
+    ]);
+
+    if (data.nodes.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="empty-state">
+                No Python files were found.
+            </div>
+        `;
+        return;
+    }
+
+    resultsContainer.innerHTML = `
+        <div class="dependency-layout">
+            <section class="dependency-graph-panel">
+                <p class="muted-text">
+                    Arrows point from a file to the file it imports.
+                    Click a node to inspect its relationships.
+                </p>
+
+                <div class="dependency-canvas">
+                    <svg id="dependencyGraph"
+                         aria-label="Python dependency graph">
+                    </svg>
+                </div>
+            </section>
+
+            <aside id="dependencyDetails"
+                   class="dependency-details"
+                   aria-live="polite">
+            </aside>
+        </div>
+    `;
+
+    const svg = document.getElementById("dependencyGraph");
+    const details = document.getElementById("dependencyDetails");
+
+    // Build lookup tables for imported files and dependents.
+    const knownIds = new Set(data.nodes.map(node => node.id));
+
+    const edges = data.edges.filter(edge =>
+        knownIds.has(edge.source) && knownIds.has(edge.target)
+    );
+
+    const imports = new Map();
+    const usedBy = new Map();
+
+    for (const node of data.nodes) {
+        imports.set(node.id, []);
+        usedBy.set(node.id, []);
+    }
+
+    for (const edge of edges) {
+        imports.get(edge.source).push(edge.target);
+        usedBy.get(edge.target).push(edge.source);
+    }
+
+    // Calculate graph layers.
+    // Files with no imports go on the left.
+    // Files importing other files appear farther right.
+    const remaining = new Map();
+    const layers = new Map();
+    const queue = [];
+
+    for (const node of data.nodes) {
+        const count = imports.get(node.id).length;
+
+        remaining.set(node.id, count);
+        layers.set(node.id, 0);
+
+        if (count === 0) {
+            queue.push(node.id);
+        }
+    }
+
+    for (let i = 0; i < queue.length; i++) {
+        const completed = queue[i];
+
+        for (const dependent of usedBy.get(completed)) {
+            const nextLayer = layers.get(completed) + 1;
+
+            layers.set(
+                dependent,
+                Math.max(layers.get(dependent), nextLayer)
+            );
+
+            remaining.set(dependent, remaining.get(dependent) - 1);
+
+            if (remaining.get(dependent) === 0) {
+                queue.push(dependent);
+            }
+        }
+    }
+
+    // Organize files into columns.
+    const columns = new Map();
+
+    for (const node of data.nodes) {
+        const layer = layers.get(node.id);
+
+        if (!columns.has(layer)) {
+            columns.set(layer, []);
+        }
+
+        columns.get(layer).push(node.id);
+    }
+
+    // Determine node positions.
+    const nodeWidth = 184;
+    const nodeHeight = 52;
+    const horizontalGap = 100;
+    const verticalGap = 44;
+    const padding = 30;
+
+    const positions = new Map();
+
+    let maxColumn = 0;
+    let maxRows = 0;
+
+    for (const [column, ids] of columns) {
+        ids.sort();
+        maxColumn = Math.max(maxColumn, column);
+        maxRows = Math.max(maxRows, ids.length);
+
+        ids.forEach((id, row) => {
+            positions.set(id, {
+                x: padding + column * (nodeWidth + horizontalGap),
+                y: padding + row * (nodeHeight + verticalGap),
+            });
+        });
+    }
+
+    const width =
+        padding * 2 +
+        (maxColumn + 1) * nodeWidth +
+        maxColumn * horizontalGap;
+
+    const height = Math.max(
+        220,
+        padding * 2 +
+        maxRows * nodeHeight +
+        Math.max(0, maxRows - 1) * verticalGap
+    );
+
+    svg.setAttribute("width", width);
+    svg.setAttribute("height", height);
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+    // Add an arrowhead definition.
+    svg.innerHTML = `
+        <defs>
+            <marker id="dependencyArrow"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z"
+                      fill="#9aa6bf" />
+            </marker>
+        </defs>
+    `;
+
+    // Draw connections before nodes so lines stay behind boxes.
+    const edgeElements = [];
+
+    for (const edge of edges) {
+        const source = positions.get(edge.source);
+        const target = positions.get(edge.target);
+
+        let startX;
+        let startY;
+        let endX;
+        let endY;
+        let pathData;
+
+        if (source.x !== target.x) {
+            const rightward = target.x > source.x;
+
+            startX = rightward ? source.x + nodeWidth : source.x;
+            endX = rightward ? target.x : target.x + nodeWidth;
+
+            startY = source.y + nodeHeight / 2;
+            endY = target.y + nodeHeight / 2;
+
+            const middleX = (startX + endX) / 2;
+
+            pathData = `
+                M ${startX} ${startY}
+                C ${middleX} ${startY},
+                  ${middleX} ${endY},
+                  ${endX} ${endY}
+            `;
+        } else {
+            const downward = target.y > source.y;
+
+            startX = source.x + nodeWidth / 2;
+            endX = target.x + nodeWidth / 2;
+
+            startY = downward ? source.y + nodeHeight : source.y;
+            endY = downward ? target.y : target.y + nodeHeight;
+
+            const middleY = (startY + endY) / 2;
+
+            pathData = `
+                M ${startX} ${startY}
+                C ${startX} ${middleY},
+                  ${endX} ${middleY},
+                  ${endX} ${endY}
+            `;
+        }
+
+        const path = createSVGElement("path", {
+            d: pathData,
+            class: "dependency-edge",
+            "marker-end": "url(#dependencyArrow)",
+        });
+
+        svg.appendChild(path);
+        edgeElements.push({ element: path, edge });
+    }
+
+    // Create clickable nodes for each Python file.
+    const nodeElements = new Map();
+
+    for (const node of data.nodes) {
+        const position = positions.get(node.id);
+
+        const group = createSVGElement("g", {
+            class: "dependency-node",
+            role: "button",
+            tabindex: "0",
+            "aria-label": `Inspect ${node.id}`,
+        });
+
+        const rectangle = createSVGElement("rect", {
+            x: position.x,
+            y: position.y,
+            width: nodeWidth,
+            height: nodeHeight,
+            rx: 10,
+        });
+
+        const label = createSVGElement("text", {
+            x: position.x + 12,
+            y: position.y + 32,
+        });
+
+        const shortName = node.label.length > 24
+            ? node.label.slice(0, 21) + "..."
+            : node.label;
+
+        label.textContent = shortName;
+
+        const tooltip = createSVGElement("title");
+        tooltip.textContent = node.id;
+
+        group.appendChild(rectangle);
+        group.appendChild(label);
+        group.appendChild(tooltip);
+
+        group.addEventListener("click", () => selectNode(node.id));
+
+        group.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                selectNode(node.id);
+            }
+        });
+
+        svg.appendChild(group);
+        nodeElements.set(node.id, group);
+    }
+
+    // Display the relationships of the selected file.
+    function selectNode(fileId) {
+        const importedFiles = [...new Set(imports.get(fileId))].sort();
+        const dependentFiles = [...new Set(usedBy.get(fileId))].sort();
+
+        function makeList(items) {
+            if (items.length === 0) {
+                return `<p class="muted-text">None detected.</p>`;
+            }
+
+            return `
+                <ul>
+                    ${items.map(item =>
+                        `<li><code>${escapeHTML(item)}</code></li>`
+                    ).join("")}
+                </ul>
+            `;
+        }
+
+        details.innerHTML = `
+            <h3>${escapeHTML(fileId)}</h3>
+
+            <h4>Imports</h4>
+            ${makeList(importedFiles)}
+
+            <h4>Used by</h4>
+            ${makeList(dependentFiles)}
+        `;
+
+        for (const [id, element] of nodeElements) {
+            element.classList.toggle("selected", id === fileId);
+
+            element.classList.toggle(
+                "related",
+                importedFiles.includes(id) || dependentFiles.includes(id)
+            );
+        }
+
+        for (const item of edgeElements) {
+            const related =
+                item.edge.source === fileId ||
+                item.edge.target === fileId;
+
+            item.element.classList.toggle("highlighted", related);
+        }
+    }
+
+    // Automatically select a useful node when opening the graph.
+    const initialFile = edges.length > 0
+        ? edges[0].target
+        : data.nodes[0].id;
+
+    selectNode(initialFile);
+}
+
+
+
 async function runSearch() {
     const repoPath = getRepoPath();
     const query = getSearchQuery();
@@ -400,10 +751,39 @@ async function viewSymbols() {
 }
 
 
+async function viewDependencies() {
+    const repoPath = getRepoPath();
+
+
+    if (!repoPath) {
+        showError("Please enter a repository path.");
+        return;
+    }
+
+    clearPage();
+    setStatus("Loading dependencies...");
+
+
+    try {
+        const data = await requestJSON("/dependencies", {
+            repoPath: repoPath,
+        });
+
+        renderDependencies(data);
+        setStatus("Dependency graph loaded.");
+    } catch (error) {
+        showError(error.message);
+        setStatus("Could not load dependencies.");
+    }
+
+}
+
+
 searchButton.addEventListener("click", runSearch);
 filesButton.addEventListener("click", viewFiles);
 statsButton.addEventListener("click", viewStats);
 symbolsButton.addEventListener("click", viewSymbols);
+dependenciesButton.addEventListener("click", viewDependencies);
 
 searchQueryInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {
