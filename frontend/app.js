@@ -6,7 +6,7 @@ const searchButton = document.getElementById("searchButton");
 const filesButton = document.getElementById("filesButton");
 const statsButton = document.getElementById("statsButton");
 const symbolsButton = document.getElementById("symbolsButton");
-const dependenciesButton = document.getElementById("dependenciesButton")
+const dependenciesButton = document.getElementById("dependenciesButton");
 
 const summaryContainer = document.getElementById("summary");
 const resultsContainer = document.getElementById("results");

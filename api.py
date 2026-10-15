@@ -142,7 +142,7 @@ def get_symbols(
 
 @app.get("/dependencies")
 def get_dependencies(
-        repo_path: str = Query(..., description="Repository folder to analyze"),
+    repo_path: str = Query(..., description="Repository folder to analyze"),
 ):
     try:
         graph = build_dependency_graph(repo_path)
