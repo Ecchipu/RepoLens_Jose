@@ -11,7 +11,10 @@ const dependenciesButton = document.getElementById("dependenciesButton");
 const summaryContainer = document.getElementById("summary");
 const resultsContainer = document.getElementById("results");
 const statusText = document.getElementById("statusText");
-
+const fileDialog = document.getElementById("fileDialog");
+const fileDialogTitle = document.getElementById("fileDialogTitle");
+const fileDialogBody = document.getElementById("fileDialogBody");
+const closeFileButton = document.getElementById("closeFileButton");
 
 function escapeHTML(value) {
     return String(value)
@@ -82,6 +85,71 @@ function renderSummary(cards) {
             </article>
         `;
     }).join("");
+}
+
+// Opens a source file in a popup window
+async function openFile(filePath, focusLine = 1) {
+
+    // Get the repository path from the input box
+    const repoPath = getRepoPath();
+
+    // Set the popup title to the selected filename
+    fileDialogTitle.textContent = filePath;
+
+    // Show a loading message
+    fileDialogBody.textContent = "Loading file...";
+
+    // Open the popup
+    fileDialog.showModal();
+
+    try {
+        // Ask FastAPI for the contents of the selected file
+        const data = await requestJSON("/file", {
+            repo_path: repoPath,
+            file_path: filePath,
+        });
+
+        // Convert every line of code into HTML
+        fileDialogBody.innerHTML = data.lines.map(line => {
+
+            // Check whether this line is the selected search result
+            const isHighlighted = line.line_number === focusLine;
+
+            return `
+                <div class="file-code-line ${isHighlighted ? "highlighted" : ""}">
+
+                    <span class="file-line-number">
+                        ${line.line_number}
+                    </span>
+
+                    <code class="file-line-text">
+                        ${escapeHTML(line.text)}
+                    </code>
+
+                </div>
+            `;
+
+        }).join("");
+
+        // Find the highlighted line
+        const highlightedLine = fileDialogBody.querySelector(
+            ".file-code-line.highlighted"
+        );
+
+        // Scroll to that line automatically
+        if (highlightedLine) {
+            highlightedLine.scrollIntoView({
+                block: "center",
+            });
+        }
+
+    } catch (error) {
+
+        console.error("RepoLens file viewer error:", error);
+
+        fileDialogBody.textContent =
+            `Could not open file: ${error.message}`;
+    }
 }
 
 
@@ -800,4 +868,31 @@ searchQueryInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {
         runSearch();
     }
+});
+
+// Listen for clicks on the Open File buttons
+resultsContainer.addEventListener("click", event => {
+
+    // Find the Open File button that was clicked
+    const button = event.target.closest("[data-open-file]");
+
+    // Stop if the click was not on an Open File button
+    if (!button) {
+        return;
+    }
+
+    // Get the file path from the button
+    const filePath = button.dataset.openFile;
+
+    // Get the line number from the button
+    const lineNumber = Number(button.dataset.lineNumber);
+
+    // Open the selected file
+    openFile(filePath, lineNumber);
+});
+
+
+// Close the file viewer when the Close button is clicked
+closeFileButton.addEventListener("click", () => {
+    fileDialog.close();
 });
