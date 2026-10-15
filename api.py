@@ -157,6 +157,46 @@ def get_dependencies(
 
 
 
+@app.get("/file")
+def get_file(
+    repo_path: str = Query(..., description="Repository folder"),
+    file_path: str = Query(..., description="File to open"),
+):
+    try:
+        files = scan_repo(repo_path)
+
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    for file in files:
+        if file["path"] == file_path:
+            lines = file["content"].splitlines()
+
+            numbered_lines = []
+
+            for line_number, text in enumerate(lines, start=1):
+                numbered_lines.append({
+                    "line_number": line_number,
+                    "text": text,
+                })
+
+            return {
+                "repository": repo_path,
+                "path": file_path,
+                "line_count": len(lines),
+                "lines": numbered_lines,
+            }
+
+    raise HTTPException(
+        status_code=404,
+        detail="File not found among the scanned repository files.",
+    )
+
+
+
 app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")
 
 
