@@ -772,6 +772,7 @@ async function viewDependencies() {
         renderDependencies(data);
         setStatus("Dependency graph loaded.");
     } catch (error) {
+        console.error("RepoLens dependency error:", error);
         showError(error.message);
         setStatus("Could not load dependencies.");
     }
