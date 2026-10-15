@@ -754,7 +754,6 @@ async function viewSymbols() {
 async function viewDependencies() {
     const repoPath = getRepoPath();
 
-
     if (!repoPath) {
         showError("Please enter a repository path.");
         return;
@@ -763,20 +762,19 @@ async function viewDependencies() {
     clearPage();
     setStatus("Loading dependencies...");
 
-
     try {
         const data = await requestJSON("/dependencies", {
-            repoPath: repoPath,
+            repo_path: repoPath,
         });
 
         renderDependencies(data);
         setStatus("Dependency graph loaded.");
+
     } catch (error) {
         console.error("RepoLens dependency error:", error);
         showError(error.message);
         setStatus("Could not load dependencies.");
     }
-
 }
 
 
