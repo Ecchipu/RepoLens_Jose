@@ -389,6 +389,82 @@ button.secondary {
     overflow-wrap: anywhere;
 }
 
+
+
+/* ===== RepoLens File Viewer ===== */
+
+.file-dialog {
+    width: min(950px, 95vw);
+    max-height: 88vh;
+    padding: 0;
+    background: #181b24;
+    color: #f4f7fb;
+    border: 1px solid #343a4a;
+    border-radius: 16px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+}
+
+.file-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.file-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    background: #202432;
+    border-bottom: 1px solid #343a4a;
+}
+
+.file-dialog-header strong {
+    color: #ffffff;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.file-dialog-body {
+    max-height: 70vh;
+    overflow: auto;
+    padding: 14px 0;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.85rem;
+}
+
+.file-code-line {
+    display: grid;
+    grid-template-columns: 55px max-content;
+    gap: 16px;
+    width: max-content;
+    min-width: 100%;
+    padding: 5px 16px;
+    line-height: 1.6;
+}
+
+.file-code-line.highlighted {
+    background: rgba(142, 164, 255, 0.18);
+    border-left: 3px solid #8ea4ff;
+}
+
+.file-line-number {
+    color: #7f89a3;
+    text-align: right;
+    user-select: none;
+}
+
+.file-line-text {
+    color: #e7ebf5;
+    white-space: pre;
+    font-family: inherit;
+}
+
+.open-file-button {
+    font-size: 0.8rem;
+    padding: 7px 12px;
+}
+
+
 @media (max-width: 850px) {
     .dependency-layout {
         grid-template-columns: 1fr;
