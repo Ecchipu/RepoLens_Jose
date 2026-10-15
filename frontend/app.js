@@ -129,13 +129,25 @@ function renderSearchResults(data) {
 
         return `
             <article class="result-card">
+
                 <div class="result-path">
-                    ${escapeHTML(result.path)}:${result.line_number}
+                    <span>
+                        ${escapeHTML(result.path)}:${result.line_number}
+                    </span>
+
+                    <button
+                        type="button"
+                        class="open-file-button"
+                        data-open-file="${escapeHTML(result.path)}"
+                        data-line-number="${result.line_number}">
+                        Open File
+                    </button>
                 </div>
 
                 <div class="code-block">
                     ${contextHTML}
                 </div>
+
             </article>
         `;
     }).join("");
