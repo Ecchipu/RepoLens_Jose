@@ -122,9 +122,7 @@ async function openFile(filePath, focusLine = 1) {
                         ${line.line_number}
                     </span>
 
-                    <code class="file-line-text">
-                        ${escapeHTML(line.text)}
-                    </code>
+                    <code class="file-line-text">${escapeHTML(line.text)}</code>
 
                 </div>
             `;
