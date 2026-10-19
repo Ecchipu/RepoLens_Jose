@@ -80,6 +80,11 @@ def _scan_repo_uncached(repo_path: str) -> list[dict]:
     files = []
 
     for file_path in repo.rglob("*"):
+
+        # Do not read symbolic links.
+        if file_path.is_symlink():
+            continue
+
         if should_ignore_path(file_path):
             continue
 

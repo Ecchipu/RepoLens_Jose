@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.staticfiles import StaticFiles
+
 
 from indexer import scan_repo, search_files, clear_repo_cache #Reusing what we wrote in indexer.py, so we can use it here in the API
 from symbols import extract_symbols
 from dependencies import build_dependency_graph
+from security import require_allowed_repository
 
 
 app = FastAPI(
