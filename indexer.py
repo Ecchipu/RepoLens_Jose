@@ -1,8 +1,7 @@
-
 import time
 from pathlib import Path
 from threading import Lock
-
+import logging
 
 # File extensions RepoLens can scan
 SUPPORTED_EXTENSIONS = {
@@ -37,6 +36,9 @@ IGNORED_DIRS = {
 CACHE_TTL_SECONDS = 10
 MAX_CACHED_REPOSITORIES = 5
 
+MAX_FILE_SIZE_BYTES = 1024 * 1024
+logger = logging.getLogger(__name__)
+
 # Stores recently scanned repositories
 _scan_cache = {}
 
@@ -60,18 +62,26 @@ def should_ignore_path(file_path: Path) -> bool:
     return False
 
 
+
 def _scan_repo_uncached(repo_path: str) -> list[dict]:
     """
-    Scan a repository directly from disk.
-    This is our original scanning logic.
+    Scan supported source files in a repository.
+
+    Skip individual files that are too large, unreadable,
+    or have invalid UTF-8 encoding.
+
+    Record warnings so we can diagnose skipped files.
     """
+
     repo = Path(repo_path)
 
+    # Make sure the repository exists.
     if not repo.exists():
         raise FileNotFoundError(
             f"Repo path does not exist: {repo_path}"
         )
 
+    # Make sure the repository is a directory.
     if not repo.is_dir():
         raise NotADirectoryError(
             f"Repo path is not a folder: {repo_path}"
@@ -81,28 +91,65 @@ def _scan_repo_uncached(repo_path: str) -> list[dict]:
 
     for file_path in repo.rglob("*"):
 
-        # Do not read symbolic links.
+        # Never read symbolic links.
         if file_path.is_symlink():
             continue
 
+        # Ignore unwanted directories and files.
         if should_ignore_path(file_path):
             continue
 
-        if file_path.is_file() and is_supported_file(file_path):
-            try:
-                content = file_path.read_text(encoding="utf-8")
-            except UnicodeDecodeError:
+        try:
+            # Skip folders and unsupported extensions.
+            if not file_path.is_file():
                 continue
 
-            lines = content.splitlines()
+            if not is_supported_file(file_path):
+                continue
 
-            files.append({
-                "path": str(file_path),
-                "content": content,
-                "line_count": len(lines),
-            })
+            # Check the file's size before reading its contents.
+            file_size = file_path.stat().st_size
+
+            if file_size > MAX_FILE_SIZE_BYTES:
+                logger.warning(
+                    "Skipping oversized file: %s",
+                    file_path,
+                )
+                continue
+
+            # Attempt to read the file as UTF-8 text.
+            content = file_path.read_text(
+                encoding="utf-8"
+            )
+
+        except UnicodeError:
+            # The file contains invalid text encoding.
+            logger.warning(
+                "Skipping file with invalid encoding: %s",
+                file_path,
+            )
+            continue
+
+        except OSError as error:
+            # The file could not be accessed or read.
+            logger.warning(
+                "Skipping unreadable file %s: %s",
+                file_path,
+                error,
+            )
+            continue
+
+        # Only successfully read files reach this point.
+        lines = content.splitlines()
+
+        files.append({
+            "path": str(file_path),
+            "content": content,
+            "line_count": len(lines),
+        })
 
     return files
+
 
 
 def scan_repo(repo_path: str) -> list[dict]:
