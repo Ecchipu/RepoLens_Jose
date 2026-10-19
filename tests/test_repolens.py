@@ -1,4 +1,6 @@
 import pytest
+
+import api
 import indexer
 
 from fastapi.testclient import TestClient
@@ -14,6 +16,8 @@ from indexer import (
 from symbols import analyze_python_file
 from dependencies import build_dependency_graph
 from pathlib import Path
+
+import api
 
 
 # Allows us to make test requests to the FastAPI application.

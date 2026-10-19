@@ -63,21 +63,82 @@ function showError(message) {
 
 
 
-async function requestJSON(endpoint, params, options = {}) {
+
+async function requestJSON(endpoint, params = {}, options = {}) {
+
+    // Convert parameters into a URL query string.
     const queryString = new URLSearchParams(params).toString();
-    const url = `${endpoint}?${queryString}`;
 
-    const response = await fetch(url, options);
-    const data = await response.json();
+    const url = queryString
+        ? `${endpoint}?${queryString}`
+        : endpoint;
 
-    if (!response.ok) {
+    let response;
+
+    // STEP 1: Try contacting the server.
+    try {
+        response = await fetch(url, options);
+
+    } catch (error) {
         throw new Error(
-            data.detail || `Request failed with status ${response.status}`
+            "Cannot connect to the RepoLens server. " +
+            "Make sure FastAPI is running."
         );
     }
 
+    // STEP 2: Check the response format.
+    const contentType =
+        response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+
+        if (!response.ok) {
+            throw new Error(
+                `Server returned HTTP ${response.status}. ` +
+                "Check the FastAPI terminal for details."
+            );
+        }
+
+        throw new Error(
+            "The server returned an unexpected response format."
+        );
+    }
+
+    // STEP 3: Try reading the JSON response.
+    let data;
+
+    try {
+        data = await response.json();
+
+    } catch (error) {
+        throw new Error(
+            "The server returned invalid JSON."
+        );
+    }
+
+    // STEP 4: Handle unsuccessful HTTP responses.
+    if (!response.ok) {
+
+        let message = data.detail;
+
+        // FastAPI validation errors can be arrays.
+        if (Array.isArray(message)) {
+            message = message.map(item => {
+                return item.msg || "Invalid input";
+            }).join("; ");
+        }
+
+        if (typeof message !== "string" || !message) {
+            message = `Request failed (HTTP ${response.status}).`;
+        }
+
+        throw new Error(message);
+    }
+
+    // STEP 5: Return successful API data.
     return data;
 }
+
 
 
 

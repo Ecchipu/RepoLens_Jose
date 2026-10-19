@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.staticfiles import StaticFiles
 
 
@@ -10,12 +10,68 @@ from security import require_allowed_repository
 from fastapi.responses import JSONResponse
 from indexer import RepositoryLimitError
 
+import logging
 
 app = FastAPI(
     title="RepoLens API",
     description="A code search API that scans a repository and returns matching code lines with context.",
     version="1.0.1",
 )
+
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(PermissionError)
+async def permission_error_handler(
+    request: Request,
+    error: PermissionError,
+):
+    """
+    Handle permission errors without crashing the API.
+    """
+
+    logger.warning(
+        "Permission denied during %s: %s",
+        request.url.path,
+        error,
+    )
+
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": (
+                "RepoLens does not have permission "
+                "to access the requested files."
+            ),
+        },
+    )
+
+
+@app.exception_handler(OSError)
+async def filesystem_error_handler(
+    request: Request,
+    error: OSError,
+):
+    """
+    Handle unexpected filesystem errors.
+    """
+
+    logger.error(
+        "Filesystem error during %s: %s",
+        request.url.path,
+        error,
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": (
+                "A filesystem error occurred while "
+                "processing the repository."
+            ),
+        },
+    )
+
 
 @app.exception_handler(RepositoryLimitError)
 async def repository_limit_handler(request, error):
