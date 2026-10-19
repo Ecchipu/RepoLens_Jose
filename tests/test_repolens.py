@@ -316,93 +316,93 @@ def test_scanner_skips_symlinked_files(tmp_path):
     assert files == []
 
     # TEST 18: Oversized files should be skipped.
-    def test_scanner_skips_oversized_files(tmp_path):
-        repo = tmp_path / "demo_repo"
-        repo.mkdir()
+def test_scanner_skips_oversized_files(tmp_path):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
 
-        # A small, valid Python file.
-        (repo / "small.py").write_text(
-            "value = 42\n",
-            encoding="utf-8",
+    # A small, valid Python file.
+    (repo / "small.py").write_text(
+        "value = 42\n",
+        encoding="utf-8",
+    )
+
+    # A source file larger than our configured limit.
+    (repo / "huge.py").write_bytes(
+        b"x" * (MAX_FILE_SIZE_BYTES + 1)
+    )
+
+    files = scan_repo(str(repo))
+
+    # Only the small file should be returned.
+    assert len(files) == 1
+    assert Path(files[0]["path"]).name == "small.py"
+
+# TEST 19: Invalid UTF-8 should not crash the scanner.
+def test_scanner_skips_invalid_encoding(tmp_path):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    # This file contains invalid UTF-8 bytes.
+    (repo / "damaged.py").write_bytes(
+        b"\xff\xfe\xfa"
+    )
+
+    # This file should still be scanned.
+    (repo / "working.py").write_text(
+        "print('hello')\n",
+        encoding="utf-8",
+    )
+
+    files = scan_repo(str(repo))
+
+    assert len(files) == 1
+    assert Path(files[0]["path"]).name == "working.py"
+
+# TEST 20: A file read error should not stop the scan.
+def test_scanner_handles_permission_errors(
+        tmp_path,
+        monkeypatch,
+):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    protected_file = repo / "protected.py"
+    protected_file.write_text(
+        "secret = 123\n",
+        encoding="utf-8",
+    )
+
+    working_file = repo / "working.py"
+    working_file.write_text(
+        "value = 42\n",
+        encoding="utf-8",
+    )
+
+    # Save the original method.
+    original_read_text = Path.read_text
+
+    # Simulate a permission error for one particular file.
+    def fake_read_text(path, *args, **kwargs):
+        if path == protected_file:
+            raise PermissionError("Access denied")
+
+        return original_read_text(
+            path,
+            *args,
+            **kwargs,
         )
 
-        # A source file larger than our configured limit.
-        (repo / "huge.py").write_bytes(
-            b"x" * (MAX_FILE_SIZE_BYTES + 1)
-        )
+    # Temporarily replace Path.read_text during this test.
+    monkeypatch.setattr(
+        Path,
+        "read_text",
+        fake_read_text,
+    )
 
-        files = scan_repo(str(repo))
+    files = scan_repo(str(repo))
 
-        # Only the small file should be returned.
-        assert len(files) == 1
-        assert Path(files[0]["path"]).name == "small.py"
-
-    # TEST 19: Invalid UTF-8 should not crash the scanner.
-    def test_scanner_skips_invalid_encoding(tmp_path):
-        repo = tmp_path / "demo_repo"
-        repo.mkdir()
-
-        # This file contains invalid UTF-8 bytes.
-        (repo / "damaged.py").write_bytes(
-            b"\xff\xfe\xfa"
-        )
-
-        # This file should still be scanned.
-        (repo / "working.py").write_text(
-            "print('hello')\n",
-            encoding="utf-8",
-        )
-
-        files = scan_repo(str(repo))
-
-        assert len(files) == 1
-        assert Path(files[0]["path"]).name == "working.py"
-
-    # TEST 20: A file read error should not stop the scan.
-    def test_scanner_handles_permission_errors(
-            tmp_path,
-            monkeypatch,
-    ):
-        repo = tmp_path / "demo_repo"
-        repo.mkdir()
-
-        protected_file = repo / "protected.py"
-        protected_file.write_text(
-            "secret = 123\n",
-            encoding="utf-8",
-        )
-
-        working_file = repo / "working.py"
-        working_file.write_text(
-            "value = 42\n",
-            encoding="utf-8",
-        )
-
-        # Save the original method.
-        original_read_text = Path.read_text
-
-        # Simulate a permission error for one particular file.
-        def fake_read_text(path, *args, **kwargs):
-            if path == protected_file:
-                raise PermissionError("Access denied")
-
-            return original_read_text(
-                path,
-                *args,
-                **kwargs,
-            )
-
-        # Temporarily replace Path.read_text during this test.
-        monkeypatch.setattr(
-            Path,
-            "read_text",
-            fake_read_text,
-        )
-
-        files = scan_repo(str(repo))
-
-        # The protected file is skipped.
-        # The working file is still scanned.
-        assert len(files) == 1
-        assert Path(files[0]["path"]).name == "working.py"
+    # The protected file is skipped.
+    # The working file is still scanned.
+    assert len(files) == 1
+    assert Path(files[0]["path"]).name == "working.py"
 
