@@ -17,7 +17,6 @@ from symbols import analyze_python_file
 from dependencies import build_dependency_graph
 from pathlib import Path
 
-import api
 
 
 # Allows us to make test requests to the FastAPI application.
@@ -472,3 +471,125 @@ def test_api_repository_limit_error(tmp_path, monkeypatch):
 
     assert response.status_code == 422
     assert "limit" in response.json()["detail"].lower()
+
+
+# TEST 24: A missing repository returns HTTP 404.
+def test_api_missing_repository(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    missing_repo = tmp_path / "missing_project"
+
+    response = client.get(
+        "/files",
+        params={"repo_path": str(missing_repo)},
+    )
+
+    assert response.status_code == 404
+    assert "detail" in response.json()
+
+
+# TEST 25: A file cannot be used as a repository folder.
+def test_api_rejects_non_directory(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    file_path = tmp_path / "not_a_folder.py"
+    file_path.write_text(
+        "print('hello')\n",
+        encoding="utf-8",
+    )
+
+    response = client.get(
+        "/files",
+        params={"repo_path": str(file_path)},
+    )
+
+    assert response.status_code == 400
+    assert "detail" in response.json()
+
+
+# TEST 26: Opening a missing file returns HTTP 404.
+def test_api_file_not_found(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    response = client.get(
+        "/file",
+        params={
+            "repo_path": str(repo),
+            "file_path": str(repo / "missing.py"),
+        },
+    )
+
+    assert response.status_code == 404
+    assert "detail" in response.json()
+
+
+# TEST 27: Simulated permission error returns HTTP 403.
+def test_api_handles_permission_error(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    def simulate_permission_error(repo_path):
+        raise PermissionError("Simulated access denied")
+
+    monkeypatch.setattr(
+        api,
+        "scan_repo",
+        simulate_permission_error,
+    )
+
+    response = client.get(
+        "/files",
+        params={"repo_path": str(repo)},
+    )
+
+    assert response.status_code == 403
+    assert "permission" in response.json()["detail"].lower()
+
+
+# TEST 28: Unexpected filesystem error returns HTTP 500.
+def test_api_handles_filesystem_error(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    def simulate_filesystem_error(repo_path):
+        raise OSError("Simulated filesystem failure")
+
+    monkeypatch.setattr(
+        api,
+        "scan_repo",
+        simulate_filesystem_error,
+    )
+
+    response = client.get(
+        "/files",
+        params={"repo_path": str(repo)},
+    )
+
+    assert response.status_code == 500
+
+    # Verify that internal error details aren't exposed.
+    assert "Simulated filesystem failure" not in str(
+        response.json()
+    )

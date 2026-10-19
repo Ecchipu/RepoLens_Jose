@@ -64,6 +64,7 @@ function showError(message) {
 
 
 
+
 async function requestJSON(endpoint, params = {}, options = {}) {
 
     // Convert parameters into a URL query string.
@@ -138,6 +139,7 @@ async function requestJSON(endpoint, params = {}, options = {}) {
     // STEP 5: Return successful API data.
     return data;
 }
+
 
 
 
