@@ -7,12 +7,24 @@ from symbols import extract_symbols
 from dependencies import build_dependency_graph
 from security import require_allowed_repository
 
+from fastapi.responses import JSONResponse
+from indexer import RepositoryLimitError
+
 
 app = FastAPI(
     title="RepoLens API",
     description="A code search API that scans a repository and returns matching code lines with context.",
     version="1.0.1",
 )
+
+@app.exception_handler(RepositoryLimitError)
+async def repository_limit_handler(request, error):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": str(error),
+        },
+    )
 
 @app.get("/") # SO when you run the API, it will automatically open this page, because it is the root page, returning the message bellow, showing how it works. like in html, "/" is default page or new blank page, something like that
 def root():

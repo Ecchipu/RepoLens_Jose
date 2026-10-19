@@ -1,4 +1,5 @@
 import pytest
+import indexer
 
 from fastapi.testclient import TestClient
 
@@ -406,3 +407,64 @@ def test_scanner_handles_permission_errors(
     assert len(files) == 1
     assert Path(files[0]["path"]).name == "working.py"
 
+
+# TEST 21: Reject repositories with too many source files.
+def test_repository_file_count_limit(tmp_path, monkeypatch):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    for number in range(3):
+        (repo / f"file_{number}.py").write_text(
+            "value = 1\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(indexer, "MAX_REPO_FILES", 2)
+
+    with pytest.raises(indexer.RepositoryLimitError):
+        scan_repo(str(repo))
+
+
+# TEST 22: Reject repositories exceeding total source size.
+def test_repository_total_size_limit(tmp_path, monkeypatch):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    (repo / "first.py").write_text("x" * 30, encoding="utf-8")
+    (repo / "second.py").write_text("y" * 30, encoding="utf-8")
+
+    monkeypatch.setattr(
+        indexer,
+        "MAX_REPO_TOTAL_BYTES",
+        50,
+    )
+
+    with pytest.raises(indexer.RepositoryLimitError):
+        scan_repo(str(repo))
+
+
+# TEST 23: API should return a useful repository-limit error.
+def test_api_repository_limit_error(tmp_path, monkeypatch):
+    repo = tmp_path / "demo_repo"
+    repo.mkdir()
+
+    for number in range(3):
+        (repo / f"file_{number}.py").write_text(
+            "value = 1\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setenv(
+        "REPOLENS_ALLOWED_ROOT",
+        str(tmp_path),
+    )
+
+    monkeypatch.setattr(indexer, "MAX_REPO_FILES", 2)
+
+    response = client.get(
+        "/files",
+        params={"repo_path": str(repo)},
+    )
+
+    assert response.status_code == 422
+    assert "limit" in response.json()["detail"].lower()

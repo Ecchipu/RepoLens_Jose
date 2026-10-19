@@ -37,6 +37,18 @@ CACHE_TTL_SECONDS = 10
 MAX_CACHED_REPOSITORIES = 5
 
 MAX_FILE_SIZE_BYTES = 1024 * 1024
+
+# Maximum number of source files in one scan
+MAX_REPO_FILES = 2000
+
+# Maximum combined size of scanned source files: 20 MiB
+MAX_REPO_TOTAL_BYTES = 20 * 1024 * 1024
+
+
+class RepositoryLimitError(Exception):
+    """Raised when a repository exceeds a scanning limit."""
+    pass
+
 logger = logging.getLogger(__name__)
 
 # Stores recently scanned repositories
@@ -63,53 +75,46 @@ def should_ignore_path(file_path: Path) -> bool:
 
 
 
+
 def _scan_repo_uncached(repo_path: str) -> list[dict]:
     """
-    Scan supported source files in a repository.
-
-    Skip individual files that are too large, unreadable,
-    or have invalid UTF-8 encoding.
-
-    Record warnings so we can diagnose skipped files.
+    Scan a repository with per-file and
+    repository-wide resource limits.
     """
 
     repo = Path(repo_path)
 
-    # Make sure the repository exists.
     if not repo.exists():
         raise FileNotFoundError(
             f"Repo path does not exist: {repo_path}"
         )
 
-    # Make sure the repository is a directory.
     if not repo.is_dir():
         raise NotADirectoryError(
             f"Repo path is not a folder: {repo_path}"
         )
 
     files = []
+    total_bytes = 0
 
     for file_path in repo.rglob("*"):
 
-        # Never read symbolic links.
         if file_path.is_symlink():
             continue
 
-        # Ignore unwanted directories and files.
         if should_ignore_path(file_path):
             continue
 
         try:
-            # Skip folders and unsupported extensions.
             if not file_path.is_file():
                 continue
 
             if not is_supported_file(file_path):
                 continue
 
-            # Check the file's size before reading its contents.
             file_size = file_path.stat().st_size
 
+            # Ignore individual oversized files.
             if file_size > MAX_FILE_SIZE_BYTES:
                 logger.warning(
                     "Skipping oversized file: %s",
@@ -117,13 +122,26 @@ def _scan_repo_uncached(repo_path: str) -> list[dict]:
                 )
                 continue
 
-            # Attempt to read the file as UTF-8 text.
+            # Stop before exceeding the file-count limit.
+            if len(files) >= MAX_REPO_FILES:
+                raise RepositoryLimitError(
+                    f"Repository exceeds the limit of "
+                    f"{MAX_REPO_FILES} source files."
+                )
+
+            # Stop before exceeding the total-size limit.
+            if total_bytes + file_size > MAX_REPO_TOTAL_BYTES:
+                raise RepositoryLimitError(
+                    f"Repository exceeds the total source "
+                    f"size limit of "
+                    f"{MAX_REPO_TOTAL_BYTES // (1024 * 1024)} MiB."
+                )
+
             content = file_path.read_text(
                 encoding="utf-8"
             )
 
         except UnicodeError:
-            # The file contains invalid text encoding.
             logger.warning(
                 "Skipping file with invalid encoding: %s",
                 file_path,
@@ -131,7 +149,6 @@ def _scan_repo_uncached(repo_path: str) -> list[dict]:
             continue
 
         except OSError as error:
-            # The file could not be accessed or read.
             logger.warning(
                 "Skipping unreadable file %s: %s",
                 file_path,
@@ -139,16 +156,16 @@ def _scan_repo_uncached(repo_path: str) -> list[dict]:
             )
             continue
 
-        # Only successfully read files reach this point.
-        lines = content.splitlines()
-
         files.append({
             "path": str(file_path),
             "content": content,
-            "line_count": len(lines),
+            "line_count": len(content.splitlines()),
         })
 
+        total_bytes += file_size
+
     return files
+
 
 
 
