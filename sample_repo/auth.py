@@ -6,3 +6,6 @@ def login_user(username, password):
 
 def logout_user(username):
     return f"{username} logged out"
+
+def reset_password(username):
+    return f"Password reset requested for {username}"
