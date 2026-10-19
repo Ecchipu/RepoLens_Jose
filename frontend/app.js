@@ -7,6 +7,7 @@ const filesButton = document.getElementById("filesButton");
 const statsButton = document.getElementById("statsButton");
 const symbolsButton = document.getElementById("symbolsButton");
 const dependenciesButton = document.getElementById("dependenciesButton");
+const refreshButton = document.getElementById("refreshButton");
 
 const summaryContainer = document.getElementById("summary");
 const resultsContainer = document.getElementById("results");
@@ -61,19 +62,23 @@ function showError(message) {
 }
 
 
-async function requestJSON(endpoint, params) {
+
+async function requestJSON(endpoint, params, options = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = `${endpoint}?${queryString}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, options);
     const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(data.detail || `Request failed with status ${response.status}`);
+        throw new Error(
+            data.detail || `Request failed with status ${response.status}`
+        );
     }
 
     return data;
 }
+
 
 
 function renderSummary(cards) {
@@ -918,11 +923,56 @@ async function viewDependencies() {
 }
 
 
+async function refreshRepository() {
+    const repoPath = getRepoPath();
+
+    if (!repoPath) {
+        showError("Please enter a repository path.");
+        return;
+    }
+
+    // Prevent repeated clicks while a refresh is in progress.
+    refreshButton.disabled = true;
+
+    setStatus("Refreshing repository...");
+
+    try {
+        // Ask FastAPI to clear its cache and scan the files again.
+        const data = await requestJSON(
+            "/refresh",
+            { repo_path: repoPath },
+            { method: "POST" }
+        );
+
+        console.log("Repository refreshed:", data);
+
+        // Show updated search results using the fresh scan.
+        if (getSearchQuery()) {
+            await runSearch();
+        } else {
+            await viewFiles();
+        }
+
+    } catch (error) {
+        console.error("RepoLens refresh error:", error);
+
+        showError(error.message);
+        setStatus("Could not refresh repository.");
+
+    } finally {
+        // Re-enable the button even if the request failed.
+        refreshButton.disabled = false;
+    }
+}
+
+
+
 searchButton.addEventListener("click", runSearch);
 filesButton.addEventListener("click", viewFiles);
 statsButton.addEventListener("click", viewStats);
 symbolsButton.addEventListener("click", viewSymbols);
 dependenciesButton.addEventListener("click", viewDependencies);
+refreshButton.addEventListener("click", refreshRepository);
 
 searchQueryInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {

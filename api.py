@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
-from indexer import scan_repo, search_files #Reusing what we wrote in indexer.py, so we can use it here in the API
+from indexer import scan_repo, search_files, clear_repo_cache #Reusing what we wrote in indexer.py, so we can use it here in the API
 from symbols import extract_symbols
 from dependencies import build_dependency_graph
 
@@ -194,6 +194,35 @@ def get_file(
         status_code=404,
         detail="File not found among the scanned repository files.",
     )
+
+
+
+@app.post("/refresh")
+def refresh_repository(
+    repo_path: str = Query(..., description="Repository to refresh"),
+):
+    try:
+        # Remove the previous scan from memory.
+        clear_repo_cache(repo_path)
+
+        # Scan the folder again to get the latest file contents.
+        files = scan_repo(repo_path)
+
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    except NotADirectoryError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    # Calculate updated repository statistics.
+    total_lines = sum(file["line_count"] for file in files)
+
+    return {
+        "message": "Repository refreshed successfully",
+        "repository": repo_path,
+        "files_scanned": len(files),
+        "lines_scanned": total_lines,
+    }
 
 
 
