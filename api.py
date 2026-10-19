@@ -34,7 +34,7 @@ def health_check():
         "status": "ok"
     }
 
-@app.get("/search") #
+@app.get("/search", dependencies=[Depends(require_allowed_repository)])
 def search_repo(
         repo_path: str = Query(..., description="Path to the repository folder to scan"),
         query: str = Query(..., min_length=1, description="Search term to look for"),
@@ -69,7 +69,7 @@ def search_repo(
         "results": results
     }
 
-@app.get("/files")
+@app.get("/files", dependencies=[Depends(require_allowed_repository)])
 def list_files(
         repo_path: str = Query(..., descritpion="Path to the repository folder to scan"),
 ):
@@ -94,7 +94,7 @@ def list_files(
         "files": file_list
     }
 
-@app.get("/stats")
+@app.get("/stats", dependencies=[Depends(require_allowed_repository)])
 def get_repo_stats(
         repo_path: str = Query(..., description="Path to the repository folder to scan"),
 ):
@@ -116,7 +116,7 @@ def get_repo_stats(
         "lines_scanned": total_lines,
     }
 
-@app.get("/symbols")
+@app.get("/symbols", dependencies=[Depends(require_allowed_repository)])
 def get_symbols(
         repo_path: str = Query(..., description="Path to the repository folder to scan"),
 ):
@@ -142,7 +142,7 @@ def get_symbols(
         "files": analyzed_files,
     }
 
-@app.get("/dependencies")
+@app.get("/dependencies", dependencies=[Depends(require_allowed_repository)])
 def get_dependencies(
     repo_path: str = Query(..., description="Repository folder to analyze"),
 ):
@@ -159,7 +159,7 @@ def get_dependencies(
 
 
 
-@app.get("/file")
+@app.get("/file", dependencies=[Depends(require_allowed_repository)])
 def get_file(
     repo_path: str = Query(..., description="Repository folder"),
     file_path: str = Query(..., description="File to open"),
@@ -199,7 +199,7 @@ def get_file(
 
 
 
-@app.post("/refresh")
+@app.post("/refresh", dependencies=[Depends(require_allowed_repository)])
 def refresh_repository(
     repo_path: str = Query(..., description="Repository to refresh"),
 ):
