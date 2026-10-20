@@ -139,7 +139,7 @@ def search_repo(
 
 @app.get("/files", dependencies=[Depends(require_allowed_repository)])
 def list_files(
-        repo_path: str = Query(..., descritpion="Path to the repository folder to scan"),
+        repo_path: str = Query(..., description="Path to the repository folder to scan"),
 ):
     try:
         files = scan_repo(repo_path)
